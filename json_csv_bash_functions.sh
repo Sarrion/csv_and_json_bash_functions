@@ -29,45 +29,41 @@ function sarrion.tree {
 #####
 function sarrion.select {
 
-    data=$(</dev/stdin)
-    header=$(echo $data | head -n 1)
-    header=$(echo $header | tr " ./" "_" | tr "," " ")
+    readarray data
+    header=$(echo ${data[0]} | head -n 1)
+    header=$(echo $header | tr " ./?" "_" | tr "," " ")
     header=($(echo $header))
 
-    for i in {1..${#header[@]}}
+    for i in "${!header[@]}"
     do
-        $(echo "declare $header[$i]=$i")
+	$(echo "declare ${header[$i]}=$(( $i + 1 ))")
     done
 
     col_selection=$1
-    col_selection=$(echo $col_selection | tr " ./" "_" | tr "," " ")
+    col_selection=$(echo $col_selection | tr " ./?" "_" | tr "," " ")
     col_selection=($(echo $col_selection))
 
-    command=""
-    for col in "${col_selection[@]}"
-    do
-        command="$command\$$col "
-    done
+    command=`printf "$%s " "${col_selection[@]}"`
 
     command=$(eval "echo $command")
     command=$(echo $command | sed -E 's/([0-9]*)/$\1,/g; s/,$//')
     command="BEGIN{FS=\",\"; OFS=\",\"} { print $command }"
 
-    echo $data | awk "$command"
+    printf "%s" "${data[@]}" | awk "$command"
 }
 
 
 
 function sarrion.filter {
 
-    data=$(</dev/stdin)
-    header=$(echo $data | head -n 1)
-    header=$(echo $header | tr " ./" "_" | tr "," " ")
+    readarray data
+    header=$(echo ${data[0]} | head -n 1)
+    header=$(echo $header | tr " ./?" "_" | tr "," " ")
     header=($(echo $header))
 
-    for i in {1..${#header[@]}}
+    for i in "${!header[@]}"
     do
-        $(echo "declare $header[$i]=$i")
+	$(echo "declare $header[$i]=$(( $i + 1 ))")
     done
 
     col=$(echo $1 | sed -E 's/([^=]*)=.*/$\1/' | tr " ./" "_")
@@ -76,11 +72,11 @@ function sarrion.filter {
 
     command="BEGIN { FS=\",\"; OFS=\",\" } { if( NR==1 || $col == \"$value\") { print \$0 } }"
 
-    echo $data | awk "$command"
+    printf "%s" "${data[@]}" | awk "$command"
 }
 
 
 
 function sarrion.csvpprint {
-    awk 'BEGIN {FS=","}{print} NR==1 {gsub(/[^,]/, "-"); print}' | column -s, -t
+    sed 's/,,/, ,/g' | awk 'BEGIN {FS=","}{print} NR==1 {gsub(/[^,]/, "-"); print}' | column -s, -t
 }
