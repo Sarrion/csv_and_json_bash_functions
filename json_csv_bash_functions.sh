@@ -61,16 +61,18 @@ function sarrion.filter {
     header=$(echo $header | tr " ./?" "_" | tr "," " ")
     header=($(echo $header))
 
-    for i in "${!header[@]}"
+
+    n=1
+    for i in "${header[@]}"
     do
-	$(echo "declare $header[$i]=$(( $i + 1 ))")
+        eval `printf "%s='$%s'" "$i" "$n"`
+	n=$(( $n + 1 ))
     done
 
-    col=$(echo $1 | sed -E 's/([^=]*)=.*/$\1/' | tr " ./" "_")
-    col=$(eval "echo $col" | sed -E 's/([0-9]*)/$\1/')
-    value=$(echo $1 | sed -E 's/[^=]*=([^=]*)/\1/')
+    eval "condition=\"\`echo \$$1\`\""
 
-    command="BEGIN { FS=\",\"; OFS=\",\" } { if( NR==1 || $col == \"$value\") { print \$0 } }"
+    condition="`echo $condition | sed -E 's/([^ =<>~!]*)([ =<>~!]*)([^=<>{!]*)/\1\2"\3"/'`"
+    command="BEGIN { FS=\",\"; OFS=\",\" } { if( NR==1 || $condition) { print \$0 } }"
 
     printf "%s" "${data[@]}" | awk "$command"
 }
