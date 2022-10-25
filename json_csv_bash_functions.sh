@@ -69,9 +69,10 @@ function sarrion.filter {
 	n=$(( $n + 1 ))
     done
 
-    eval "condition=\"\`echo \$$1\`\""
+    condition=`echo $1 | sed 's/"/__doublequotes__/g'`
+    eval "condition=\"\`echo \$$condition\`\""
+    condition="`echo $condition | sed -E 's/__doublequotes__/"/g'`"
 
-    condition="`echo $condition | sed -E 's/([^ =<>~!]*)([ =<>~!]*)([^=<>{!]*)/\1\2"\3"/'`"
     command="BEGIN { FS=\",\"; OFS=\",\" } { if( NR==1 || $condition) { print \$0 } }"
 
     printf "%s" "${data[@]}" | awk "$command"
