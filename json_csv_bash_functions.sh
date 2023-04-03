@@ -89,7 +89,7 @@ function sarrion.csvpprint {
 function sarrion.generate_csv {
     # Check that two arguments were passed
     if [ $# -lt 2 ]; then
-        echo "Usage: generate_csv <field_1_name>,<field_1_type> [<field_2_name>,<field_2_type> ...] <number_of_rows>"
+        echo "Usage: sarrion.generate_csv <field_1_name>,<field_1_type> [<field_2_name>,<field_2_type> ...] <number_of_rows>"
         return 1
     fi
 
@@ -131,5 +131,73 @@ function sarrion.generate_csv {
     done
     echo "${row::-1}" 
   done
+}
+
+
+
+function sarrion.inner_join {
+    # Check that two arguments were passed
+    if [ $# -lt 2 ]; then
+        echo "Usage: <csv_1_content> | sarrion.inner_join <join_field_x_fst_csv_name>=<join_field_y_snd_csv_name>[,<join_field_x2_fst_csv_name>=<join_field_y2_snd_csv_name> ...] <csv_2>"
+        echo ""
+        echo 'example usage: cat example1.csv | sarrion.inner_join "fst_csv_field1=snd_csv_field2,fst_csv_field3=snd_csv_field3" example2.csv'
+        return 1
+    fi
+
+    # read the join fields as a comma-separated list
+    local join_fields=($(echo "$1" | tr ',' ' '))
+
+    # read the second CSV file
+    local csv2_file="$2"
+    local -a csv2_headers
+    read -r -a csv2_headers < <(head -n 1 "$csv2_file")
+    local csv2_num_fields="${#csv2_headers[@]}"
+
+    # build the join fields for the second CSV file
+    local -a csv2_join_fields
+    for join_field in "${join_fields[@]}"; do
+        local csv2_field=$(echo "$join_field" | cut -d '=' -f 2)
+        csv2_join_fields+=("${csv2_headers[@]/$csv2_field}")
+    done
+
+    # loop through the first CSV file and perform the join
+    while read -r csv1_line; do
+        # split the line into fields
+        IFS=',' read -r -a csv1_fields <<< "$csv1_line"
+        local csv1_num_fields="${#csv1_fields[@]}"
+        
+        # check if the join fields match any lines in the second CSV file
+        local -a csv2_lines
+        while read -r csv2_line; do
+            # split the line into fields
+            IFS=',' read -r -a csv2_fields <<< "$csv2_line"
+            local csv2_num_fields="${#csv2_fields[@]}"
+            
+            # check if the join fields match
+            local match=true
+            for join_field in "${join_fields[@]}"; do
+                local csv1_field=$(echo "$join_field" | cut -d '=' -f 1)
+                local csv2_field=$(echo "$join_field" | cut -d '=' -f 2)
+                local csv1_index=$(echo "${csv1_headers[@]}" | tr ' ' '\n' | grep -n "^$csv1_field$" | cut -d ':' -f 1)
+                local csv2_index=$(echo "${csv2_headers[@]}" | tr ' ' '\n' | grep -n "^$csv2_field$" | cut -d ':' -f 1)
+                if [[ "${csv1_fields[$csv1_index]}" != "${csv2_fields[$csv2_index]}" ]]; then
+                    match=false
+                    break
+                fi
+            done
+            
+            if $match; then
+                csv2_lines+=("$csv2_line")
+            fi
+        done < <(tail -n +2 "$csv2_file")
+        
+        # output the matched lines
+        local num_csv2_lines="${#csv2_lines[@]}"
+        for ((i=0; i<$num_csv2_lines; i++)); do
+            local csv2_line="${csv2_lines[$i]}"
+            echo "${csv1_line},${csv2_line}"
+        done
+        unset csv2_lines
+    done
 }
 
