@@ -86,7 +86,7 @@ function sarrion.csvpprint {
 
 
 
-generate_csv() {
+function sarrion.generate_csv {
     # Check that two arguments were passed
     if [ $# -lt 2 ]; then
         echo "Usage: generate_csv <field_1_name>,<field_1_type> [<field_2_name>,<field_2_type> ...] <number_of_rows>"
