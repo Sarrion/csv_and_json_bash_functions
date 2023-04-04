@@ -201,3 +201,57 @@ function sarrion.inner_join {
     done
 }
 
+
+
+function sarrion.generate_json {
+  # check that 2 arguments have been passed
+  if [ $# -lt 2 ]; then
+    echo "usage: sarrion.generate_json <int> 0"
+    return 1
+  fi
+
+  local max_depth="$1"
+  local depth="$2"
+
+  if ((depth > max_depth)); then
+    echo "\"$(date +%s)\""
+  else
+    local array_size=$((RANDOM % 5 + 1))
+    local json="{"
+
+    # Generate random keys and values
+    for ((i=0; i<$array_size; i++)); do
+      local key=$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c 10)
+      local value=""
+      local rand=$((RANDOM % 7))
+
+      case $rand in
+        0) value="\"$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c 10)\"" ;;
+        1) # Comma-separated array
+          local array_size=$(( RANDOM % 5 + 1 ))
+          local array=""
+          for (( i=0; i<$array_size; i++ )); do
+            array="$array$(generate_json $max_depth $(( depth + 1 ))),"
+          done
+          array="${array%?}"
+          value="[$array]"
+          ;;
+        2) value="$((RANDOM % 1000))" ;;
+        3) value="$((RANDOM % 1000)).$((RANDOM % 100))" ;;
+        4) value="$(generate_json $max_depth $((depth + 1)))" ;;
+        5) value="\"$(date +%Y%m%d)\"" ;;
+        6) value="\"$(date +%Y%m%d\ %H:%M:%S)\"" ;;
+      esac
+
+      # Append the key-value pair to the JSON string
+      json+="\"$key\":${value:default},"
+
+    done
+
+    # Remove the trailing comma and close the JSON string
+    json="${json%,}}"
+
+    echo "$json"
+  fi
+}
+
